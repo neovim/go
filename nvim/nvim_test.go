@@ -1015,65 +1015,106 @@ func testVar(v *Nvim) func(*testing.T) {
 			varVal = `gval`
 		)
 
+		const (
+			vvarKey  = "statusmsg"
+			wantVvar = "test"
+		)
+
 		t.Run("Nvim", func(t *testing.T) {
-			if err := v.SetVar(varKey, varVal); err != nil {
-				t.Fatal(err)
-			}
+			t.Run("Var", func(t *testing.T) {
+				if err := v.SetVar(varKey, varVal); err != nil {
+					t.Fatal(err)
+				}
 
-			var value interface{}
-			if err := v.Var(varKey, &value); err != nil {
-				t.Fatal(err)
-			}
-			if value != varVal {
-				t.Fatalf("got %v, want %q", value, varVal)
-			}
+				var value interface{}
+				if err := v.Var(varKey, &value); err != nil {
+					t.Fatal(err)
+				}
+				if value != varVal {
+					t.Fatalf("got %v, want %q", value, varVal)
+				}
 
-			if err := v.SetVar(varKey, ""); err != nil {
-				t.Fatal(err)
-			}
+				if err := v.SetVar(varKey, ""); err != nil {
+					t.Fatal(err)
+				}
 
-			value = nil
-			if err := v.Var(varKey, &value); err != nil {
-				t.Fatal(err)
-			}
-			if value != "" {
-				t.Fatalf("got %v, want %q", value, "")
-			}
+				value = nil
+				if err := v.Var(varKey, &value); err != nil {
+					t.Fatal(err)
+				}
+				if value != "" {
+					t.Fatalf("got %v, want %q", value, "")
+				}
 
-			if err := v.DeleteVar(varKey); err != nil && !strings.Contains(err.Error(), "Key not found") {
-				t.Fatal(err)
-			}
+				if err := v.DeleteVar(varKey); err != nil && !strings.Contains(err.Error(), "Key not found") {
+					t.Fatal(err)
+				}
+			})
+
+			t.Run("VVar", func(t *testing.T) {
+				if err := v.SetVVar(vvarKey, wantVvar); err != nil {
+					t.Fatalf("failed to SetVVar: %v", err)
+				}
+
+				var vvar string
+				if err := v.VVar(vvarKey, &vvar); err != nil {
+					t.Fatalf("failed to SetVVar: %v", err)
+				}
+				if vvar != wantVvar {
+					t.Fatalf("VVar(%s, %s) = %s, want: %s", vvarKey, wantVvar, vvar, wantVvar)
+				}
+			})
 		})
 
 		t.Run("Batch", func(t *testing.T) {
-			b := v.NewBatch()
+			t.Run("Var", func(t *testing.T) {
+				b := v.NewBatch()
 
-			b.SetVar(varKey, varVal)
+				b.SetVar(varKey, varVal)
 
-			var value interface{}
-			b.Var(varKey, &value)
-			if err := b.Execute(); err != nil {
-				t.Fatal(err)
-			}
-			if value != varVal {
-				t.Fatalf("got %v, want %q", value, varVal)
-			}
+				var value interface{}
+				b.Var(varKey, &value)
+				if err := b.Execute(); err != nil {
+					t.Fatal(err)
+				}
+				if value != varVal {
+					t.Fatalf("got %v, want %q", value, varVal)
+				}
 
-			b.SetVar(varKey, "")
+				b.SetVar(varKey, "")
 
-			value = nil
-			b.Var(varKey, &value)
-			if err := b.Execute(); err != nil {
-				t.Fatal(err)
-			}
-			if value != "" {
-				t.Fatalf("got %v, want %q", value, "")
-			}
+				value = nil
+				b.Var(varKey, &value)
+				if err := b.Execute(); err != nil {
+					t.Fatal(err)
+				}
+				if value != "" {
+					t.Fatalf("got %v, want %q", value, "")
+				}
 
-			b.DeleteVar(varKey)
-			if err := b.Execute(); err != nil && !strings.Contains(err.Error(), "Key not found") {
-				t.Fatal(err)
-			}
+				b.DeleteVar(varKey)
+				if err := b.Execute(); err != nil && !strings.Contains(err.Error(), "Key not found") {
+					t.Fatal(err)
+				}
+			})
+
+			t.Run("VVar", func(t *testing.T) {
+				b := v.NewBatch()
+
+				b.SetVVar(vvarKey, wantVvar)
+				if err := b.Execute(); err != nil {
+					t.Fatal(err)
+				}
+
+				var vvar string
+				b.VVar(vvarKey, &vvar)
+				if err := b.Execute(); err != nil {
+					t.Fatal(err)
+				}
+				if vvar != wantVvar {
+					t.Fatalf("VVar(%s, %s) = %s, want: %s", vvarKey, wantVvar, vvar, wantVvar)
+				}
+			})
 		})
 	}
 }
