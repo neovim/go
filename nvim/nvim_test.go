@@ -94,10 +94,8 @@ func TestAPI(t *testing.T) {
 	t.Run("Var", testVar(v))
 	t.Run("Message", testMessage(v))
 	t.Run("Key", testKey(v))
-	t.Run("StructValue", testStructValue(v))
 	t.Run("Eval", testEval(v))
 	t.Run("Batch", testBatch(v))
-	t.Run("CallWithNoArgs", testCallWithNoArgs(v))
 	t.Run("Mode", testMode(v))
 	t.Run("ExecLua", testExecLua(v))
 	t.Run("Highlight", testHighlight(v))
@@ -1428,53 +1426,6 @@ func testKey(v *Nvim) func(*testing.T) {
 	}
 }
 
-func testStructValue(v *Nvim) func(*testing.T) {
-	return func(t *testing.T) {
-		t.Run("Nvim", func(t *testing.T) {
-			t.Parallel()
-
-			var expected, actual struct {
-				Str string
-				Num int
-			}
-			expected.Str = "Hello"
-			expected.Num = 42
-			if err := v.SetVar("structvar", &expected); err != nil {
-				t.Fatal(err)
-			}
-			if err := v.Var("structvar", &actual); err != nil {
-				t.Fatal(err)
-			}
-
-			if !reflect.DeepEqual(&actual, &expected) {
-				t.Fatalf("got %+v, want %+v", &actual, &expected)
-			}
-		})
-
-		t.Run("Batch", func(t *testing.T) {
-			t.Parallel()
-
-			b := v.NewBatch()
-
-			var expected, actual struct {
-				Str string
-				Num int
-			}
-			expected.Str = "Hello"
-			expected.Num = 42
-			b.SetVar("structvar", &expected)
-			b.Var("structvar", &actual)
-			if err := b.Execute(); err != nil {
-				t.Fatal(err)
-			}
-
-			if !reflect.DeepEqual(&actual, &expected) {
-				t.Fatalf("got %+v, want %+v", &actual, &expected)
-			}
-		})
-	}
-}
-
 func testEval(v *Nvim) func(*testing.T) {
 	return func(t *testing.T) {
 		t.Run("Nvim", func(t *testing.T) {
@@ -1586,16 +1537,6 @@ func testBatch(v *Nvim) func(*testing.T) {
 		b.CurrentBuffer(&buf)
 		if err = b.Execute(); err != nil {
 			t.Fatalf("GetCurrentBuffer returns err %s: %#v", err, err)
-		}
-	}
-}
-
-func testCallWithNoArgs(v *Nvim) func(*testing.T) {
-	return func(t *testing.T) {
-		var wd string
-		err := v.Call("getcwd", &wd)
-		if err != nil {
-			t.Fatal(err)
 		}
 	}
 }
@@ -2373,6 +2314,65 @@ func TestEmbedded(t *testing.T) {
 	case <-time.After(10 * time.Second):
 		t.Fatal("timeout waiting for serve to exit")
 	}
+}
+
+func TestCallWithNoArgs(t *testing.T) {
+	t.Parallel()
+
+	v, cleanup := newChildProcess(t)
+	defer cleanup()
+
+	var wd string
+	err := v.Call("getcwd", &wd)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestStructValue(t *testing.T) {
+	t.Parallel()
+
+	v, cleanup := newChildProcess(t)
+	defer cleanup()
+
+	t.Run("Nvim", func(t *testing.T) {
+		var expected, actual struct {
+			Str string
+			Num int
+		}
+		expected.Str = `Hello`
+		expected.Num = 42
+		if err := v.SetVar(`structvar`, &expected); err != nil {
+			t.Fatal(err)
+		}
+		if err := v.Var(`structvar`, &actual); err != nil {
+			t.Fatal(err)
+		}
+
+		if !reflect.DeepEqual(&actual, &expected) {
+			t.Fatalf("SetVar: got %+v, want %+v", &actual, &expected)
+		}
+	})
+
+	t.Run("Batch", func(t *testing.T) {
+		b := v.NewBatch()
+
+		var expected, actual struct {
+			Str string
+			Num int
+		}
+		expected.Str = `Hello`
+		expected.Num = 42
+		b.SetVar(`structvar`, &expected)
+		b.Var(`structvar`, &actual)
+		if err := b.Execute(); err != nil {
+			t.Fatal(err)
+		}
+
+		if !reflect.DeepEqual(&actual, &expected) {
+			t.Fatalf("SetVar: got %+v, want %+v", &actual, &expected)
+		}
+	})
 }
 
 // clearBuffer clears the buffer lines.
