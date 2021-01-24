@@ -2,7 +2,6 @@ package plugin_test
 
 import (
 	"os"
-	"runtime"
 	"strings"
 	"testing"
 
@@ -17,12 +16,10 @@ func newEmbeddedPlugin(t *testing.T) (*plugin.Plugin, func()) {
 	}
 
 	opts := []nvim.ChildProcessOption{
+		nvim.ChildProcessCommand(nvim.BinaryName),
 		nvim.ChildProcessArgs("-u", "NONE", "-n", "--embed"),
 		nvim.ChildProcessEnv(env),
 		nvim.ChildProcessLogf(t.Logf),
-	}
-	if runtime.GOOS == "windows" {
-		opts = append(opts, nvim.ChildProcessCommand("nvim.exe"))
 	}
 	v, err := nvim.NewChildProcess(opts...)
 	if err != nil {

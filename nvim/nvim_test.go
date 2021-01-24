@@ -23,12 +23,10 @@ func newChildProcess(tb testing.TB) (v *Nvim, cleanup func()) {
 
 	ctx := context.Background()
 	opts := []ChildProcessOption{
+		ChildProcessCommand(BinaryName),
 		ChildProcessArgs("-u", "NONE", "-n", "--embed", "--headless", "--noplugin"),
 		ChildProcessContext(ctx),
 		ChildProcessLogf(tb.Logf),
-	}
-	if runtime.GOOS == "windows" {
-		opts = append(opts, ChildProcessCommand("nvim.exe"))
 	}
 	n, err := NewChildProcess(opts...)
 	if err != nil {
@@ -2444,6 +2442,7 @@ func TestEmbedded(t *testing.T) {
 	t.Parallel()
 
 	v, err := NewEmbedded(&EmbedOptions{
+		Path: BinaryName,
 		Args: []string{"-u", "NONE", "-n"},
 		Env:  []string{},
 		Logf: t.Logf,
