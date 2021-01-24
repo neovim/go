@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"runtime"
@@ -103,7 +104,7 @@ func TestAPI(t *testing.T) {
 	t.Run("FloatingWindow", testFloatingWindow(v))
 	t.Run("Context", testContext(v))
 	t.Run("Extmarks", testExtmarks(v))
-	t.Run("RuntimeFiles", testRuntimeFiles(v))
+	t.Run("Runtime", testRuntime(v))
 	t.Run("AllOptionsInfo", testAllOptionsInfo(v))
 	t.Run("OptionsInfo", testOptionsInfo(v))
 	t.Run("OpenTerm", testTerm(v))
@@ -2009,28 +2010,118 @@ func testExtmarks(v *Nvim) func(*testing.T) {
 	}
 }
 
-func testRuntimeFiles(v *Nvim) func(*testing.T) {
+func testRuntime(v *Nvim) func(*testing.T) {
 	return func(t *testing.T) {
-		files, err := v.RuntimeFiles("doc/*_diff.txt", true)
-		if err != nil {
-			t.Fatal(err)
-		}
-		sort.Strings(files)
-		if len(files) != 2 {
-			t.Fatalf("expected 2 length but got %d", len(files))
-		}
-
 		var runtimePath string
 		if err := v.Eval("$VIMRUNTIME", &runtimePath); err != nil {
 			t.Fatal(err)
 		}
-
 		viDiff := filepath.Join(runtimePath, "doc", "vi_diff.txt")
 		vimDiff := filepath.Join(runtimePath, "doc", "vim_diff.txt")
 		want := fmt.Sprintf("%s,%s", viDiff, vimDiff)
-		if got := strings.Join(files, ","); !strings.EqualFold(got, want) {
-			t.Fatalf("got %s but want %s", got, want)
+
+		home, err := os.UserHomeDir()
+		if err != nil {
+			t.Fatal(err)
 		}
+		binaryPath, err := exec.LookPath(BinaryName)
+		if err != nil {
+			t.Fatal(err)
+		}
+		nvimPrefix := filepath.Dir(filepath.Dir(binaryPath))
+
+		var wantPaths []string
+		switch runtime.GOOS {
+		case "windows":
+			wantPaths = []string{
+				`C:\Users\runneradmin\AppData\Local\nvim`,
+				`C:\Users\runneradmin\AppData\Local\nvim-data\site`,
+				`C:\Users\runneradmin\nvim\share\nvim\runtime`,
+				`C:\Users\runneradmin\nvim\lib\nvim`,
+				`C:\Users\runneradmin\AppData\Local\nvim-data\site\after`,
+				`C:\Users\runneradmin\AppData\Local\nvim\after`,
+			}
+		default:
+			wantPaths = []string{
+				filepath.Join(home, ".config", "nvim"),
+				"/etc/xdg/nvim",
+				filepath.Join(home, ".local", "share", "nvim", "site"),
+				"/usr/local/share/nvim/site",
+				"/usr/share/nvim/site",
+				filepath.Join(nvimPrefix, "/share", "nvim", "runtime"),
+				filepath.Join(nvimPrefix, "lib", "nvim"),
+				"/usr/share/nvim/site/after",
+				"/usr/local/share/nvim/site/after",
+				filepath.Join(home, ".local", "share", "nvim", "site", "after"),
+				"/etc/xdg/nvim/after",
+				filepath.Join(home, ".config", "nvim", "after"),
+			}
+		}
+
+		argName := filepath.Join("doc", "*_diff.txt")
+		argAll := true
+
+		t.Run("Nvim", func(t *testing.T) {
+			t.Run("RuntimeFiles", func(t *testing.T) {
+				files, err := v.RuntimeFiles(argName, argAll)
+				if err != nil {
+					t.Fatal(err)
+				}
+				sort.Strings(files)
+
+				if len(files) != 2 {
+					t.Fatalf("expected 2 length but got %d", len(files))
+				}
+				if got := strings.Join(files, ","); !strings.EqualFold(got, want) {
+					t.Fatalf("RuntimeFiles(%s, %t): got %s but want %s", argName, argAll, got, want)
+				}
+			})
+
+			t.Run("RuntimePaths", func(t *testing.T) {
+				paths, err := v.RuntimePaths()
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				if got, want := strings.Join(paths, ","), strings.Join(wantPaths, ","); !strings.EqualFold(got, want) {
+					t.Fatalf("RuntimePaths():\n got %v\nwant %v", paths, wantPaths)
+				}
+			})
+		})
+
+		t.Run("Batch", func(t *testing.T) {
+			t.Run("RuntimeFiles", func(t *testing.T) {
+				b := v.NewBatch()
+
+				var files []string
+				b.RuntimeFiles(argName, true, &files)
+				if err := b.Execute(); err != nil {
+					t.Fatal(err)
+				}
+				sort.Strings(files)
+
+				if len(files) != 2 {
+					t.Fatalf("expected 2 length but got %d", len(files))
+				}
+				if got := strings.Join(files, ","); !strings.EqualFold(got, want) {
+					t.Fatalf("RuntimeFiles(%s, %t): got %s but want %s", argName, argAll, got, want)
+				}
+			})
+
+			t.Run("RuntimePaths", func(t *testing.T) {
+				b := v.NewBatch()
+
+				var paths []string
+				b.RuntimePaths(&paths)
+				if err := b.Execute(); err != nil {
+					t.Fatal(err)
+				}
+
+				if got, want := strings.Join(paths, ","), strings.Join(wantPaths, ","); !strings.EqualFold(got, want) {
+					t.Fatalf("RuntimePaths():\n got %v\nwant %v", paths, wantPaths)
+				}
+			})
+		})
 	}
 }
 
