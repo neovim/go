@@ -1354,6 +1354,17 @@ func testKey(v *Nvim) func(*testing.T) {
 
 				// TODO(zchee): assertion
 			})
+
+			t.Run("StringWidth", func(t *testing.T) {
+				const str = "hello\t"
+				got, err := v.StringWidth(str)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if got != len(str) {
+					t.Fatalf("StringWidth(%s) = %d, want: %d", str, got, len(str))
+				}
+			})
 		})
 
 		t.Run("Batch", func(t *testing.T) {
@@ -1494,6 +1505,20 @@ func testKey(v *Nvim) func(*testing.T) {
 				}
 
 				// TODO(zchee): assertion
+			})
+
+			t.Run("StringWidth", func(t *testing.T) {
+				b := v.NewBatch()
+
+				const str = "hello\t"
+				var got int
+				b.StringWidth(str, &got)
+				if err := b.Execute(); err != nil {
+					t.Fatal(err)
+				}
+				if got != len(str) {
+					t.Fatalf("StringWidth(%s) = %d, want: %d", str, got, len(str))
+				}
 			})
 		})
 	}
