@@ -746,6 +746,39 @@ func testTabpage(v *Nvim) func(*testing.T) {
 func testLines(v *Nvim) func(*testing.T) {
 	return func(t *testing.T) {
 		t.Run("Nvim", func(t *testing.T) {
+			t.Run("CurrentLine", func(t *testing.T) {
+				clearBuffer(t, v, Buffer(0))
+
+				beforeLine, err := v.CurrentLine()
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				wantLine := []byte("hello world")
+				if err := v.SetCurrentLine(wantLine); err != nil {
+					t.Fatal(err)
+				}
+
+				afterLine, err := v.CurrentLine()
+				if err != nil {
+					t.Fatal(err)
+				}
+				if bytes.EqualFold(beforeLine, afterLine) {
+					t.Fatalf("current line not change: before: %v, after: %v", beforeLine, afterLine)
+				}
+
+				if err := v.DeleteCurrentLine(); err != nil {
+					t.Fatal(err)
+				}
+				deletedLine, err := v.CurrentLine()
+				if err != nil {
+					t.Fatal(err)
+				}
+				if len(deletedLine) != 0 {
+					t.Fatal("DeleteCurrentLine not deleted")
+				}
+			})
+
 			t.Run("BufferLines", func(t *testing.T) {
 				buf, err := v.CurrentBuffer()
 				if err != nil {
@@ -834,6 +867,46 @@ func testLines(v *Nvim) func(*testing.T) {
 		})
 
 		t.Run("Batch", func(t *testing.T) {
+			t.Run("CurrentLine", func(t *testing.T) {
+				clearBuffer(t, v, Buffer(0))
+
+				b := v.NewBatch()
+
+				var beforeLine []byte
+				b.CurrentLine(&beforeLine)
+				if err := b.Execute(); err != nil {
+					t.Fatal(err)
+				}
+
+				wantLine := []byte("hello world")
+				b.SetCurrentLine(wantLine)
+				if err := b.Execute(); err != nil {
+					t.Fatal(err)
+				}
+
+				var afterLine []byte
+				b.CurrentLine(&afterLine)
+				if err := b.Execute(); err != nil {
+					t.Fatal(err)
+				}
+				if bytes.EqualFold(beforeLine, afterLine) {
+					t.Fatalf("current line not change: before: %v, after: %v", beforeLine, afterLine)
+				}
+
+				b.DeleteCurrentLine()
+				if err := b.Execute(); err != nil {
+					t.Fatal(err)
+				}
+				var deletedLine []byte
+				b.CurrentLine(&deletedLine)
+				if err := b.Execute(); err != nil {
+					t.Fatal(err)
+				}
+				if len(deletedLine) != 0 {
+					t.Fatal("DeleteCurrentLine not deleted")
+				}
+			})
+
 			t.Run("BufferLines", func(t *testing.T) {
 				b := v.NewBatch()
 
