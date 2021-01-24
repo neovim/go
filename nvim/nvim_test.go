@@ -93,6 +93,7 @@ func TestAPI(t *testing.T) {
 	t.Run("Lines", testLines(v))
 	t.Run("Var", testVar(v))
 	t.Run("Message", testMessage(v))
+	t.Run("Key", testKey(v))
 	t.Run("StructValue", testStructValue(v))
 	t.Run("Eval", testEval(v))
 	t.Run("Batch", testBatch(v))
@@ -1152,6 +1153,277 @@ func testMessage(v *Nvim) func(*testing.T) {
 			if err := b.Execute(); err != nil {
 				t.Fatalf("failed to \":messages clear\" command: %v", err)
 			}
+		})
+	}
+}
+
+func testKey(v *Nvim) func(*testing.T) {
+	return func(t *testing.T) {
+		t.Run("Nvim", func(t *testing.T) {
+			t.Run("FeedKeys", func(t *testing.T) {
+				// cleanup current Buffer after tests.
+				defer clearBuffer(t, v, Buffer(0))
+
+				const (
+					keys      = `iabc<ESC>`
+					mode      = `n`
+					escapeCSI = false
+				)
+				input, err := v.ReplaceTermcodes(keys, true, true, true)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				// clear current Buffer before run FeedKeys.
+				clearBuffer(t, v, Buffer(0))
+
+				if err := v.FeedKeys(input, mode, escapeCSI); err != nil {
+					t.Fatal(err)
+				}
+
+				wantLines := []byte{'a', 'b', 'c'}
+
+				gotLines, err := v.CurrentLine()
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !reflect.DeepEqual(gotLines, wantLines) {
+					t.Fatalf("FeedKeys(%s, %s, %t): got %v, want %v", input, mode, escapeCSI, gotLines, wantLines)
+				}
+			})
+
+			t.Run("Input", func(t *testing.T) {
+				// cleanup current Buffer after tests.
+				defer clearBuffer(t, v, Buffer(0))
+
+				const (
+					keys      = `iabc<ESC>`
+					mode      = `n`
+					escapeCSI = false
+				)
+				input, err := v.ReplaceTermcodes(keys, true, true, true)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				// clear current Buffer before run FeedKeys.
+				clearBuffer(t, v, Buffer(0))
+
+				written, err := v.Input(input)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if written != len(input) {
+					t.Fatalf("Input(%s) = %d: want: %d", input, written, len(input))
+				}
+
+				wantLines := []byte{'a', 'b', 'c'}
+				gotLines, err := v.CurrentLine()
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !reflect.DeepEqual(gotLines, wantLines) {
+					t.Fatalf("FeedKeys(%s, %s, %t): got %v, want %v", input, mode, escapeCSI, gotLines, wantLines)
+				}
+			})
+
+			t.Run("InputMouse", func(t *testing.T) {
+				defer func() {
+					// cleanup current Buffer after tests.
+					clearBuffer(t, v, Buffer(0))
+
+					input, err := v.ReplaceTermcodes(`<ESC>`, true, true, true)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if err := v.FeedKeys(input, `n`, true); err != nil {
+						t.Fatal(err)
+					}
+				}()
+
+				// clear current Buffer before run FeedKeys.
+				clearBuffer(t, v, Buffer(0))
+
+				lines := [][]byte{
+					[]byte("foo bar baz"),
+					[]byte("qux quux quuz"),
+					[]byte("corge grault garply"),
+					[]byte("waldo fred plugh"),
+					[]byte("xyzzy thud"),
+				}
+				if err := v.SetBufferLines(Buffer(0), 0, -1, true, lines); err != nil {
+					t.Fatal(err)
+				}
+
+				win, err := v.CurrentWindow()
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				pos, err := v.WindowPosition(win)
+				if err != nil {
+					t.Fatal(err)
+				}
+				t.Logf("pos: %v", pos)
+
+				const (
+					button       = `left`
+					firestAction = `press`
+					secondAction = `release`
+					modifier     = ""
+				)
+				const (
+					wantGrid = 20
+					wantRow  = 2
+					wantCol  = 5
+				)
+				if err := v.InputMouse(button, firestAction, modifier, wantGrid, wantRow, wantCol); err != nil {
+					t.Fatal(err)
+				}
+
+				// TODO(zchee): assertion
+			})
+		})
+
+		t.Run("Batch", func(t *testing.T) {
+			t.Run("FeedKeys", func(t *testing.T) {
+				// cleanup current Buffer after tests.
+				defer clearBuffer(t, v, Buffer(0))
+
+				b := v.NewBatch()
+
+				const (
+					keys      = `iabc<ESC>`
+					mode      = `n`
+					escapeCSI = false
+				)
+				var input string
+				b.ReplaceTermcodes(keys, true, true, true, &input)
+				if err := b.Execute(); err != nil {
+					t.Fatal(err)
+				}
+
+				// clear current Buffer before run FeedKeys.
+				clearBuffer(t, v, Buffer(0))
+
+				b.FeedKeys(input, mode, escapeCSI)
+				if err := b.Execute(); err != nil {
+					t.Fatal(err)
+				}
+
+				wantLines := []byte{'a', 'b', 'c'}
+				gotLines, err := v.CurrentLine()
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				if !reflect.DeepEqual(gotLines, wantLines) {
+					t.Fatalf("FeedKeys(%s, %s, %t): got %v, want %v", keys, mode, escapeCSI, gotLines, wantLines)
+				}
+			})
+
+			t.Run("Input", func(t *testing.T) {
+				// cleanup current Buffer after tests.
+				defer clearBuffer(t, v, Buffer(0))
+
+				b := v.NewBatch()
+
+				const (
+					keys      = `iabc<ESC>`
+					mode      = `n`
+					escapeCSI = false
+				)
+				var input string
+				b.ReplaceTermcodes(keys, true, true, true, &input)
+				if err := b.Execute(); err != nil {
+					t.Fatal(err)
+				}
+
+				// clear current Buffer before run FeedKeys.
+				clearBuffer(t, v, Buffer(0))
+
+				var written int
+				b.Input(input, &written)
+				if err := b.Execute(); err != nil {
+					t.Fatal(err)
+				}
+				if written != len(input) {
+					t.Fatalf("Input(%s) = %d: want: %d", input, written, len(input))
+				}
+
+				wantLines := []byte{'a', 'b', 'c'}
+				var gotLines []byte
+				b.CurrentLine(&gotLines)
+				if err := b.Execute(); err != nil {
+					t.Fatal(err)
+				}
+				if !reflect.DeepEqual(gotLines, wantLines) {
+					t.Fatalf("FeedKeys(%s, %s, %t): got %v, want %v", input, mode, escapeCSI, gotLines, wantLines)
+				}
+			})
+
+			t.Run("InputMouse", func(t *testing.T) {
+				defer func() {
+					// cleanup current Buffer after tests.
+					clearBuffer(t, v, Buffer(0))
+
+					input, err := v.ReplaceTermcodes(`<ESC>`, true, true, true)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if err := v.FeedKeys(input, `n`, true); err != nil {
+						t.Fatal(err)
+					}
+				}()
+
+				// clear current Buffer before run FeedKeys.
+				clearBuffer(t, v, Buffer(0))
+
+				lines := [][]byte{
+					[]byte("foo bar baz"),
+					[]byte("qux quux quuz"),
+					[]byte("corge grault garply"),
+					[]byte("waldo fred plugh"),
+					[]byte("xyzzy thud"),
+				}
+				if err := v.SetBufferLines(Buffer(0), 0, -1, true, lines); err != nil {
+					t.Fatal(err)
+				}
+
+				win, err := v.CurrentWindow()
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				pos, err := v.WindowPosition(win)
+				if err != nil {
+					t.Fatal(err)
+				}
+				t.Logf("pos: %v", pos)
+
+				const (
+					button       = `left`
+					firestAction = `press`
+					secondAction = `release`
+					modifier     = ""
+				)
+				const (
+					wantGrid = 20
+					wantRow  = 2
+					wantCol  = 5
+				)
+				b := v.NewBatch()
+				b.InputMouse(button, firestAction, modifier, wantGrid, wantRow, wantCol)
+				if err := b.Execute(); err != nil {
+					t.Fatal(err)
+				}
+				b.InputMouse(button, secondAction, modifier, wantGrid, wantRow, wantCol)
+				if err := b.Execute(); err != nil {
+					t.Fatal(err)
+				}
+
+				// TODO(zchee): assertion
+			})
 		})
 	}
 }
