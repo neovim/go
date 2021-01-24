@@ -369,6 +369,26 @@ func testBuffer(v *Nvim) func(*testing.T) {
 					t.Fatal(err)
 				}
 			})
+
+			t.Run("SetCurrentDirectory", func(t *testing.T) {
+				wantDir, err := os.UserHomeDir()
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				if err := v.SetCurrentDirectory(wantDir); err != nil {
+					t.Fatal(err)
+				}
+
+				var got string
+				if err := v.Eval(`getcwd()`, &got); err != nil {
+					t.Fatal(err)
+				}
+
+				if got != wantDir {
+					t.Fatalf("SetCurrentDirectory(%s) = %s, want: %s", wantDir, got, wantDir)
+				}
+			})
 		})
 
 		t.Run("Batch", func(t *testing.T) {
@@ -496,6 +516,28 @@ func testBuffer(v *Nvim) func(*testing.T) {
 				b.DeleteBuffer(buf, deleteBufferOpts)
 				if err := b.Execute(); err != nil {
 					t.Fatal(err)
+				}
+			})
+
+			t.Run("SetCurrentDirectory", func(t *testing.T) {
+				wantDir, err := os.UserHomeDir()
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				b := v.NewBatch()
+				b.SetCurrentDirectory(wantDir)
+				if err := b.Execute(); err != nil {
+					t.Fatal(err)
+				}
+
+				var got string
+				if err := v.Eval(`getcwd()`, &got); err != nil {
+					t.Fatal(err)
+				}
+
+				if got != wantDir {
+					t.Fatalf("SetCurrentDirectory(%s) = %s, want: %s", wantDir, got, wantDir)
 				}
 			})
 		})
