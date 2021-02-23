@@ -2438,6 +2438,51 @@ func testRuntime(v *Nvim) func(*testing.T) {
 
 func testOptions(v *Nvim) func(*testing.T) {
 	return func(t *testing.T) {
+		t.Run("Option", func(t *testing.T) {
+			tests := map[string]struct {
+				name string
+				want interface{}
+			}{
+				"background": {
+					name: "background",
+					want: "dark",
+				},
+			}
+
+			for name, tt := range tests {
+				tt := tt
+				t.Run("Nvim/"+name, func(t *testing.T) {
+					t.Parallel()
+
+					var got interface{}
+					if err := v.Option(tt.name, &got); err != nil {
+						t.Fatal(err)
+					}
+					if !reflect.DeepEqual(tt.want, got) {
+						t.Fatalf("got %#v but want %#v", got, tt.want)
+					}
+				})
+			}
+
+			for name, tt := range tests {
+				tt := tt
+				t.Run("Batch/"+name, func(t *testing.T) {
+					t.Parallel()
+
+					b := v.NewBatch()
+
+					var got interface{}
+					b.Option(tt.name, &got)
+					if err := b.Execute(); err != nil {
+						t.Fatal(err)
+					}
+					if !reflect.DeepEqual(tt.want, got) {
+						t.Fatalf("got %#v but want %#v", got, tt.want)
+					}
+				})
+			}
+		})
+
 		t.Run("OptionInfo", func(t *testing.T) {
 			tests := map[string]struct {
 				name string
