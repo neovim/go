@@ -1123,6 +1123,26 @@ func testVar(v *Nvim) func(*testing.T) {
 func testMessage(v *Nvim) func(*testing.T) {
 	return func(t *testing.T) {
 		t.Run("Nvim", func(t *testing.T) {
+			t.Run("Echo", func(t *testing.T) {
+				const wantEcho = `hello Echo`
+				chunk := []EchoChunk{
+					{
+						Text: wantEcho,
+					},
+				}
+				if err := v.Echo(chunk, true, make(map[string]interface{})); err != nil {
+					t.Fatalf("failed to Echo: %v", err)
+				}
+
+				gotEcho, err := v.Exec("message", true)
+				if err != nil {
+					t.Fatalf("could not get v:statusmsg nvim variable: %v", err)
+				}
+				if gotEcho != wantEcho {
+					t.Fatalf("Echo(%q) = %q, want: %q", wantEcho, gotEcho, wantEcho)
+				}
+			})
+
 			t.Run("WriteOut", func(t *testing.T) {
 				defer func() {
 					// cleanup v:statusmsg
@@ -1253,6 +1273,26 @@ func testMessage(v *Nvim) func(*testing.T) {
 		})
 
 		t.Run("Batch", func(t *testing.T) {
+			t.Run("Echo", func(t *testing.T) {
+				b := v.NewBatch()
+
+				const wantEcho = `hello Echo`
+				chunk := []EchoChunk{
+					{
+						Text: wantEcho,
+					},
+				}
+				b.Echo(chunk, true, make(map[string]interface{}))
+
+				var gotEcho string
+				b.Exec("message", true, &gotEcho)
+				if err := b.Execute(); err != nil {
+					t.Fatalf("failed to Execute: %v", err)
+				}
+				if gotEcho != wantEcho {
+					t.Fatalf("Echo(%q) = %q, want: %q", wantEcho, gotEcho, wantEcho)
+				}
+			})
 			t.Run("WriteOut", func(t *testing.T) {
 				defer func() {
 					// cleanup v:statusmsg
