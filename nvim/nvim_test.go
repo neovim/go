@@ -2173,74 +2173,150 @@ func testVirtualText(v *Nvim) func(*testing.T) {
 
 func testFloatingWindow(v *Nvim) func(*testing.T) {
 	return func(t *testing.T) {
-		clearBuffer(t, v, 0) // clear curret buffer text
-		curwin, err := v.CurrentWindow()
-		if err != nil {
-			t.Fatal(err)
-		}
+		t.Run("Nvim", func(t *testing.T) {
+			clearBuffer(t, v, 0) // clear curret buffer text
+			curwin, err := v.CurrentWindow()
+			if err != nil {
+				t.Fatal(err)
+			}
 
-		wantWidth := 40
-		wantHeight := 20
+			wantWidth := 40
+			wantHeight := 20
 
-		cfg := &WindowConfig{
-			Relative:  "cursor",
-			Anchor:    "NW",
-			Width:     wantWidth,
-			Height:    wantHeight,
-			Row:       1,
-			Col:       0,
-			Focusable: true,
-			Style:     "minimal",
-		}
-		w, err := v.OpenWindow(Buffer(0), true, cfg)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if curwin == w {
-			t.Fatal("same window number: floating window not focused")
-		}
+			cfg := &WindowConfig{
+				Relative:  "cursor",
+				Anchor:    "NW",
+				Width:     wantWidth,
+				Height:    wantHeight,
+				Row:       1,
+				Col:       0,
+				Focusable: true,
+				Style:     "minimal",
+			}
+			w, err := v.OpenWindow(Buffer(0), true, cfg)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if curwin == w {
+				t.Fatal("same window number: floating window not focused")
+			}
 
-		gotWidth, err := v.WindowWidth(w)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if gotWidth != wantWidth {
-			t.Fatalf("got %d width but want %d", gotWidth, wantWidth)
-		}
+			gotWidth, err := v.WindowWidth(w)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if gotWidth != wantWidth {
+				t.Fatalf("got %d width but want %d", gotWidth, wantWidth)
+			}
 
-		gotHeight, err := v.WindowHeight(w)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if gotHeight != wantHeight {
-			t.Fatalf("got %d height but want %d", gotHeight, wantHeight)
-		}
+			gotHeight, err := v.WindowHeight(w)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if gotHeight != wantHeight {
+				t.Fatalf("got %d height but want %d", gotHeight, wantHeight)
+			}
 
-		batch := v.NewBatch()
-		var (
-			numberOpt         bool
-			relativenumberOpt bool
-			cursorlineOpt     bool
-			cursorcolumnOpt   bool
-			spellOpt          bool
-			listOpt           bool
-			signcolumnOpt     string
-			colorcolumnOpt    string
-		)
-		batch.WindowOption(w, "number", &numberOpt)
-		batch.WindowOption(w, "relativenumber", &relativenumberOpt)
-		batch.WindowOption(w, "cursorline", &cursorlineOpt)
-		batch.WindowOption(w, "cursorcolumn", &cursorcolumnOpt)
-		batch.WindowOption(w, "spell", &spellOpt)
-		batch.WindowOption(w, "list", &listOpt)
-		batch.WindowOption(w, "signcolumn", &signcolumnOpt)
-		batch.WindowOption(w, "colorcolumn", &colorcolumnOpt)
-		if err := batch.Execute(); err != nil {
-			t.Fatal(err)
-		}
-		if numberOpt || relativenumberOpt || cursorlineOpt || cursorcolumnOpt || spellOpt || listOpt || signcolumnOpt != "auto" || colorcolumnOpt != "" {
-			t.Fatal("expected minimal style")
-		}
+			batch := v.NewBatch()
+			var (
+				numberOpt         bool
+				relativenumberOpt bool
+				cursorlineOpt     bool
+				cursorcolumnOpt   bool
+				spellOpt          bool
+				listOpt           bool
+				signcolumnOpt     string
+				colorcolumnOpt    string
+			)
+			batch.WindowOption(w, "number", &numberOpt)
+			batch.WindowOption(w, "relativenumber", &relativenumberOpt)
+			batch.WindowOption(w, "cursorline", &cursorlineOpt)
+			batch.WindowOption(w, "cursorcolumn", &cursorcolumnOpt)
+			batch.WindowOption(w, "spell", &spellOpt)
+			batch.WindowOption(w, "list", &listOpt)
+			batch.WindowOption(w, "signcolumn", &signcolumnOpt)
+			batch.WindowOption(w, "colorcolumn", &colorcolumnOpt)
+			if err := batch.Execute(); err != nil {
+				t.Fatal(err)
+			}
+			if numberOpt || relativenumberOpt || cursorlineOpt || cursorcolumnOpt || spellOpt || listOpt || signcolumnOpt != "auto" || colorcolumnOpt != "" {
+				t.Fatal("expected minimal style")
+			}
+		})
+
+		t.Run("Batch", func(t *testing.T) {
+			clearBuffer(t, v, 0) // clear curret buffer text
+
+			b := v.NewBatch()
+			var curwin Window
+			b.CurrentWindow(&curwin)
+			if err := b.Execute(); err != nil {
+				t.Fatal(err)
+			}
+
+			wantWidth := 40
+			wantHeight := 20
+
+			cfg := &WindowConfig{
+				Relative:  "cursor",
+				Anchor:    "NW",
+				Width:     wantWidth,
+				Height:    wantHeight,
+				Row:       1,
+				Col:       0,
+				Focusable: true,
+				Style:     "minimal",
+			}
+			var w Window
+			b.OpenWindow(Buffer(0), true, cfg, &w)
+			if err := b.Execute(); err != nil {
+				t.Fatal(err)
+			}
+
+			if curwin == w {
+				t.Fatal("same window number: floating window not focused")
+			}
+
+			var gotWidth int
+			b.WindowWidth(w, &gotWidth)
+			var gotHeight int
+			b.WindowHeight(w, &gotHeight)
+			if err := b.Execute(); err != nil {
+				t.Fatal(err)
+			}
+
+			if gotWidth != wantWidth {
+				t.Fatalf("got %d width but want %d", gotWidth, wantWidth)
+			}
+			if gotHeight != wantHeight {
+				t.Fatalf("got %d height but want %d", gotHeight, wantHeight)
+			}
+
+			var (
+				numberOpt         bool
+				relativenumberOpt bool
+				cursorlineOpt     bool
+				cursorcolumnOpt   bool
+				spellOpt          bool
+				listOpt           bool
+				signcolumnOpt     string
+				colorcolumnOpt    string
+			)
+			b.WindowOption(w, "number", &numberOpt)
+			b.WindowOption(w, "relativenumber", &relativenumberOpt)
+			b.WindowOption(w, "cursorline", &cursorlineOpt)
+			b.WindowOption(w, "cursorcolumn", &cursorcolumnOpt)
+			b.WindowOption(w, "spell", &spellOpt)
+			b.WindowOption(w, "list", &listOpt)
+			b.WindowOption(w, "signcolumn", &signcolumnOpt)
+			b.WindowOption(w, "colorcolumn", &colorcolumnOpt)
+			if err := b.Execute(); err != nil {
+				t.Fatal(err)
+			}
+			if numberOpt || relativenumberOpt || cursorlineOpt || cursorcolumnOpt || spellOpt || listOpt || signcolumnOpt != "auto" || colorcolumnOpt != "" {
+				t.Fatal("expected minimal style")
+			}
+		})
 	}
 }
 
