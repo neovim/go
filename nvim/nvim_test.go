@@ -24,7 +24,7 @@ func newChildProcess(tb testing.TB) (v *Nvim, cleanup func()) {
 	ctx := context.Background()
 	opts := []ChildProcessOption{
 		ChildProcessCommand(BinaryName),
-		ChildProcessArgs("-u", "NONE", "-n", "--embed", "--headless", "--noplugin"),
+		ChildProcessArgs("-u", "NONE", "-n", "-i", "NONE", "--embed", "--headless", "--noplugin"),
 		ChildProcessContext(ctx),
 		ChildProcessLogf(tb.Logf),
 	}
