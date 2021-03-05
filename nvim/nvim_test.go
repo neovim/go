@@ -103,6 +103,7 @@ func TestAPI(t *testing.T) {
 	t.Run("Context", testContext(v))
 	t.Run("Extmarks", testExtmarks(v))
 	t.Run("Runtime", testRuntime(v))
+	t.Run("Namespace", testNamespace(v))
 	t.Run("Options", testOptions(v))
 	t.Run("AllOptionsInfo", testAllOptionsInfo(v))
 	t.Run("OptionsInfo", testOptionsInfo(v))
@@ -2506,6 +2507,66 @@ func testRuntime(v *Nvim) func(*testing.T) {
 
 				if got, want := strings.Join(paths, ","), strings.Join(wantPaths, ","); !strings.EqualFold(got, want) {
 					t.Fatalf("RuntimePaths():\n got %v\nwant %v", paths, wantPaths)
+				}
+			})
+		})
+	}
+}
+
+func testNamespace(v *Nvim) func(*testing.T) {
+	return func(t *testing.T) {
+		t.Run("Namespace", func(t *testing.T) {
+			t.Parallel()
+
+			t.Run("Nvim", func(t *testing.T) {
+				t.Parallel()
+
+				const nsName = "test-nvim"
+				nsID, err := v.CreateNamespace(nsName)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				nsIDs, err := v.Namespaces()
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				gotID, ok := nsIDs[nsName]
+				if !ok {
+					t.Fatalf("not fount %s namespace ID", nsName)
+				}
+
+				if gotID != nsID {
+					t.Fatalf("nsID mismatched: got: %d want: %d", gotID, nsID)
+				}
+			})
+
+			t.Run("Batch", func(t *testing.T) {
+				t.Parallel()
+
+				b := v.NewBatch()
+
+				const nsName = "test-batch"
+				var nsID int
+				b.CreateNamespace(nsName, &nsID)
+				if err := b.Execute(); err != nil {
+					t.Fatal(err)
+				}
+
+				var nsIDs map[string]int
+				b.Namespaces(&nsIDs)
+				if err := b.Execute(); err != nil {
+					t.Fatal(err)
+				}
+
+				gotID, ok := nsIDs[nsName]
+				if !ok {
+					t.Fatalf("not fount %s namespace ID", nsName)
+				}
+
+				if gotID != nsID {
+					t.Fatalf("nsID mismatched: got: %d want: %d", gotID, nsID)
 				}
 			})
 		})
