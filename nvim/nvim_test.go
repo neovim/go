@@ -2516,9 +2516,68 @@ func testRuntime(v *Nvim) func(*testing.T) {
 
 func testPutPaste(v *Nvim) func(*testing.T) {
 	return func(t *testing.T) {
-		t.Run("Paste", func(t *testing.T) {
-			t.Parallel()
+		t.Run("Put", func(t *testing.T) {
+			t.Run("Nvim", func(t *testing.T) {
+				clearBuffer(t, v, Buffer(0)) // clear curret buffer text
 
+				replacement := [][]byte{[]byte("foo"), []byte("bar"), []byte("baz")}
+				if err := v.SetBufferText(Buffer(0), 0, 0, 0, 0, replacement); err != nil {
+					t.Fatal(err)
+				}
+
+				const putText = "qux"
+				putLines := []string{putText}
+				if err := v.Put(putLines, "l", true, true); err != nil {
+					t.Fatal(err)
+				}
+
+				want := append(replacement, []byte(putText))
+
+				lines, err := v.BufferLines(Buffer(0), 0, -1, true)
+				if err != nil {
+					t.Fatal(err)
+				}
+				wantLines := bytes.Join(want, []byte("\n"))
+				gotLines := bytes.Join(lines, []byte("\n"))
+				if !bytes.Equal(wantLines, gotLines) {
+					t.Fatalf("expected %s but got %s", string(wantLines), string(gotLines))
+				}
+			})
+
+			t.Run("Batch", func(t *testing.T) {
+				clearBuffer(t, v, 0) // clear curret buffer text
+
+				b := v.NewBatch()
+
+				replacement := [][]byte{[]byte("foo"), []byte("bar"), []byte("baz")}
+				b.SetBufferText(Buffer(0), 0, 0, 0, 0, replacement)
+				if err := b.Execute(); err != nil {
+					t.Fatal(err)
+				}
+
+				const putText = "qux"
+				putLines := []string{putText}
+				b.Put(putLines, "l", true, true)
+				if err := b.Execute(); err != nil {
+					t.Fatal(err)
+				}
+
+				want := append(replacement, []byte(putText))
+
+				var lines [][]byte
+				b.BufferLines(Buffer(0), 0, -1, true, &lines)
+				if err := b.Execute(); err != nil {
+					t.Fatal(err)
+				}
+				wantLines := bytes.Join(want, []byte("\n"))
+				gotLines := bytes.Join(lines, []byte("\n"))
+				if !bytes.Equal(wantLines, gotLines) {
+					t.Fatalf("expected %s but got %s", string(wantLines), string(gotLines))
+				}
+			})
+		})
+
+		t.Run("Paste", func(t *testing.T) {
 			t.Run("Nvim", func(t *testing.T) {
 				clearBuffer(t, v, 0) // clear curret buffer text
 
