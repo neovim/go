@@ -1915,13 +1915,32 @@ func testBatch(v *Nvim) func(*testing.T) {
 
 func testMode(v *Nvim) func(*testing.T) {
 	return func(t *testing.T) {
-		m, err := v.Mode()
-		if err != nil {
-			t.Fatal(err)
-		}
-		if m.Mode != "n" {
-			t.Fatalf("Mode() returned %s, want n", m.Mode)
-		}
+		t.Run("Nvim", func(t *testing.T) {
+			t.Parallel()
+
+			m, err := v.Mode()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if m.Mode != "n" {
+				t.Fatalf("Mode() returned %s, want n", m.Mode)
+			}
+		})
+
+		t.Run("Batch", func(t *testing.T) {
+			t.Parallel()
+
+			b := v.NewBatch()
+
+			var m Mode
+			b.Mode(&m)
+			if err := b.Execute(); err != nil {
+				t.Fatal(err)
+			}
+			if m.Mode != "n" {
+				t.Fatalf("Mode() returned %s, want n", m.Mode)
+			}
+		})
 	}
 }
 
