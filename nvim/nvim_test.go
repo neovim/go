@@ -1127,7 +1127,7 @@ func testMessage(v *Nvim) func(*testing.T) {
 		t.Run("Nvim", func(t *testing.T) {
 			t.Run("Echo", func(t *testing.T) {
 				const wantEcho = `hello Echo`
-				chunk := []EchoChunk{
+				chunk := []TextChunk{
 					{
 						Text: wantEcho,
 					},
@@ -1279,7 +1279,7 @@ func testMessage(v *Nvim) func(*testing.T) {
 				b := v.NewBatch()
 
 				const wantEcho = `hello Echo`
-				chunk := []EchoChunk{
+				chunk := []TextChunk{
 					{
 						Text: wantEcho,
 					},
