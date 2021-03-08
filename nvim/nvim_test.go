@@ -2343,18 +2343,39 @@ func testFloatingWindow(v *Nvim) func(*testing.T) {
 
 func testContext(v *Nvim) func(*testing.T) {
 	return func(t *testing.T) {
-		ctxt, err := v.Context(make(map[string][]string))
-		if err != nil {
-			t.Fatal(err)
-		}
+		t.Run("Nvim", func(t *testing.T) {
+			ctxt, err := v.Context(make(map[string][]string))
+			if err != nil {
+				t.Fatal(err)
+			}
 
-		var result interface{}
-		if err := v.LoadContext(ctxt, &result); err != nil {
-			t.Fatal(err)
-		}
-		if result != nil {
-			t.Fatal("expected result to nil")
-		}
+			var result interface{}
+			if err := v.LoadContext(ctxt, &result); err != nil {
+				t.Fatal(err)
+			}
+			if result != nil {
+				t.Fatal("expected result to nil")
+			}
+		})
+
+		t.Run("Batch", func(t *testing.T) {
+			b := v.NewBatch()
+
+			var ctxt map[string]interface{}
+			b.Context(make(map[string][]string), &ctxt)
+			if err := b.Execute(); err != nil {
+				t.Fatal(err)
+			}
+
+			var result interface{}
+			b.LoadContext(ctxt, &result)
+			if err := b.Execute(); err != nil {
+				t.Fatal(err)
+			}
+			if result != nil {
+				t.Fatal("expected result to nil")
+			}
+		})
 	}
 }
 
