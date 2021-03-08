@@ -2011,6 +2011,15 @@ func testHighlight(v *Nvim) func(*testing.T) {
 			if !reflect.DeepEqual(want, got) {
 				t.Fatalf("SetHighlight:\nwant %#v\n got %#v", want, got)
 			}
+
+			const wantRedColor = 16711680
+			gotColor, err := v.ColorByName("red")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if wantRedColor != gotColor {
+				t.Fatalf("expected red color %d but got %d", wantRedColor, gotColor)
+			}
 		})
 
 		t.Run("Batch", func(t *testing.T) {
@@ -2133,6 +2142,16 @@ func testHighlight(v *Nvim) func(*testing.T) {
 			}
 			if !reflect.DeepEqual(&got, want) {
 				t.Fatalf("SetHighlight:\n got %#v\nwant %#v", &got, want)
+			}
+
+			const wantRedColor = 16711680
+			var gotColor int
+			b.ColorByName("red", &gotColor)
+			if err := b.Execute(); err != nil {
+				t.Fatal(err)
+			}
+			if wantRedColor != gotColor {
+				t.Fatalf("expected red color %d but got %d", wantRedColor, gotColor)
 			}
 		})
 	}
