@@ -1581,6 +1581,33 @@ func testKey(v *Nvim) func(*testing.T) {
 					t.Fatalf("StringWidth(%s) = %d, want: %d", str, got, len(str))
 				}
 			})
+
+			t.Run("KeyMap", func(t *testing.T) {
+				if err := v.SetKeyMap("n", "y", "yy", make(map[string]bool)); err != nil {
+					t.Fatal(err)
+				}
+
+				wantMap := []*Mapping{
+					{
+						LHS:     "y",
+						RHS:     "yy",
+						Silent:  0,
+						NoRemap: 0,
+						Expr:    0,
+						Buffer:  0,
+						SID:     0,
+						NoWait:  0,
+						Mode:    "",
+					},
+				}
+				got, err := v.KeyMap("n")
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !reflect.DeepEqual(wantMap, got) {
+					t.Fatalf("KeyMap(n) = %#v, want: %#v", got, wantMap)
+				}
+			})
 		})
 
 		t.Run("Batch", func(t *testing.T) {
@@ -1734,6 +1761,37 @@ func testKey(v *Nvim) func(*testing.T) {
 				}
 				if got != len(str) {
 					t.Fatalf("StringWidth(%s) = %d, want: %d", str, got, len(str))
+				}
+			})
+
+			t.Run("KeyMap", func(t *testing.T) {
+				b := v.NewBatch()
+
+				b.SetKeyMap("n", "y", "yy", make(map[string]bool))
+				if err := b.Execute(); err != nil {
+					t.Fatal(err)
+				}
+
+				wantMap := []*Mapping{
+					{
+						LHS:     "y",
+						RHS:     "yy",
+						Silent:  0,
+						NoRemap: 0,
+						Expr:    0,
+						Buffer:  0,
+						SID:     0,
+						NoWait:  0,
+						Mode:    "",
+					},
+				}
+				var got []*Mapping
+				b.KeyMap("n", &got)
+				if err := b.Execute(); err != nil {
+					t.Fatal(err)
+				}
+				if !reflect.DeepEqual(wantMap, got) {
+					t.Fatalf("KeyMap(n) = %#v, want: %#v", got, wantMap)
 				}
 			})
 		})
