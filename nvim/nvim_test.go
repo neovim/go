@@ -2409,10 +2409,6 @@ func testRuntime(v *Nvim) func(*testing.T) {
 		vimDiff := filepath.Join(runtimePath, "doc", "vim_diff.txt")
 		want := fmt.Sprintf("%s,%s", viDiff, vimDiff)
 
-		home, err := os.UserHomeDir()
-		if err != nil {
-			t.Fatal(err)
-		}
 		binaryPath, err := exec.LookPath(BinaryName)
 		if err != nil {
 			t.Fatal(err)
@@ -2422,27 +2418,32 @@ func testRuntime(v *Nvim) func(*testing.T) {
 		var wantPaths []string
 		switch runtime.GOOS {
 		case "windows":
+			localAppDataDir := os.Getenv("LocalAppData")
 			wantPaths = []string{
-				`C:\Users\runneradmin\AppData\Local\nvim`,
-				`C:\Users\runneradmin\AppData\Local\nvim-data\site`,
-				`C:\Users\runneradmin\nvim\share\nvim\runtime`,
-				`C:\Users\runneradmin\nvim\lib\nvim`,
-				`C:\Users\runneradmin\AppData\Local\nvim-data\site\after`,
-				`C:\Users\runneradmin\AppData\Local\nvim\after`,
+				filepath.Join(localAppDataDir, "nvim"),
+				filepath.Join(localAppDataDir, "nvim-data", "site"),
+				filepath.Join(nvimPrefix, "share", "nvim", "runtime"),
+				filepath.Join(nvimPrefix, "lib", "nvim"),
+				filepath.Join(localAppDataDir, "nvim-data", "site", "after"),
+				filepath.Join(localAppDataDir, "nvim", "after"),
 			}
 		default:
+			home, err := os.UserHomeDir()
+			if err != nil {
+				t.Fatal(err)
+			}
 			wantPaths = []string{
 				filepath.Join(home, ".config", "nvim"),
-				"/etc/xdg/nvim",
+				filepath.Join("/etc", "xdg", "nvim"),
 				filepath.Join(home, ".local", "share", "nvim", "site"),
-				"/usr/local/share/nvim/site",
-				"/usr/share/nvim/site",
-				filepath.Join(nvimPrefix, "/share", "nvim", "runtime"),
+				filepath.Join("/usr", "local", "share", "nvim", "site"),
+				filepath.Join("/usr", "share", "nvim", "site"),
+				filepath.Join(nvimPrefix, "share", "nvim", "runtime"),
 				filepath.Join(nvimPrefix, "lib", "nvim"),
-				"/usr/share/nvim/site/after",
-				"/usr/local/share/nvim/site/after",
+				filepath.Join("/usr", "share", "nvim", "site", "after"),
+				filepath.Join("/usr", "local", "share", "nvim", "site", "after"),
 				filepath.Join(home, ".local", "share", "nvim", "site", "after"),
-				"/etc/xdg/nvim/after",
+				filepath.Join("/etc", "xdg", "nvim", "after"),
 				filepath.Join(home, ".config", "nvim", "after"),
 			}
 		}
