@@ -104,6 +104,7 @@ func TestAPI(t *testing.T) {
 	t.Run("Extmarks", testExtmarks(v))
 	t.Run("Runtime", testRuntime(v))
 	t.Run("Namespace", testNamespace(v))
+	t.Run("PutPaste", testPutPaste(v))
 	t.Run("Options", testOptions(v))
 	t.Run("AllOptionsInfo", testAllOptionsInfo(v))
 	t.Run("OptionsInfo", testOptionsInfo(v))
@@ -2507,6 +2508,84 @@ func testRuntime(v *Nvim) func(*testing.T) {
 
 				if got, want := strings.Join(paths, ","), strings.Join(wantPaths, ","); !strings.EqualFold(got, want) {
 					t.Fatalf("RuntimePaths():\n got %v\nwant %v", paths, wantPaths)
+				}
+			})
+		})
+	}
+}
+
+func testPutPaste(v *Nvim) func(*testing.T) {
+	return func(t *testing.T) {
+		t.Run("Paste", func(t *testing.T) {
+			t.Parallel()
+
+			t.Run("Nvim", func(t *testing.T) {
+				clearBuffer(t, v, 0) // clear curret buffer text
+
+				state, err := v.Paste("!!", true, 1) // starts the paste
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !state {
+					t.Fatal("expect continue to pasting")
+				}
+				state, err = v.Paste("foo", true, 2) // continues the paste
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !state {
+					t.Fatal("expect continue to pasting")
+				}
+				state, err = v.Paste("bar", true, 2) // continues the paste
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !state {
+					t.Fatal("expect continue to pasting")
+				}
+				state, err = v.Paste("baz", true, 3) // ends the paste
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !state {
+					t.Fatal("expect not canceled")
+				}
+
+				lines, err := v.CurrentLine()
+				if err != nil {
+					t.Fatal(err)
+				}
+				const want = "!foobarbaz!"
+				if want != string(lines) {
+					t.Fatalf("got %s current lines but want %s", string(lines), want)
+				}
+			})
+
+			t.Run("Batch", func(t *testing.T) {
+				clearBuffer(t, v, 0) // clear curret buffer text
+
+				b := v.NewBatch()
+
+				var state, state2, state3, state4 bool
+				b.Paste("!!", true, 1, &state)   // starts the paste
+				b.Paste("foo", true, 2, &state2) // starts the paste
+				b.Paste("bar", true, 2, &state3) // starts the paste
+				b.Paste("baz", true, 3, &state4) // ends the paste
+				if err := b.Execute(); err != nil {
+					t.Fatal(err)
+				}
+				if !state || !state2 || !state3 || !state4 {
+					t.Fatal("expect continue to pasting")
+				}
+
+				var lines []byte
+				b.CurrentLine(&lines)
+				if err := b.Execute(); err != nil {
+					t.Fatal(err)
+				}
+				const want = "!foobarbaz!"
+				if want != string(lines) {
+					t.Fatalf("got %s current lines but want %s", string(lines), want)
 				}
 			})
 		})
