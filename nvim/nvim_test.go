@@ -1607,6 +1607,17 @@ func testKey(v *Nvim) func(*testing.T) {
 				if !reflect.DeepEqual(wantMap, got) {
 					t.Fatalf("KeyMap(n) = %#v, want: %#v", got, wantMap)
 				}
+
+				if err := v.DeleteKeyMap("n", "y"); err != nil {
+					t.Fatal(err)
+				}
+				got2, err := v.KeyMap("n")
+				if err != nil {
+					t.Fatal(err)
+				}
+				if len(got2) > 0 {
+					t.Fatalf("expected 0 but got %#v", got2)
+				}
 			})
 		})
 
@@ -1792,6 +1803,19 @@ func testKey(v *Nvim) func(*testing.T) {
 				}
 				if !reflect.DeepEqual(wantMap, got) {
 					t.Fatalf("KeyMap(n) = %#v, want: %#v", got, wantMap)
+				}
+
+				b.DeleteKeyMap("n", "y")
+				if err := b.Execute(); err != nil {
+					t.Fatal(err)
+				}
+				var got2 []*Mapping
+				b.KeyMap("n", &got2)
+				if err := b.Execute(); err != nil {
+					t.Fatal(err)
+				}
+				if len(got2) > 0 {
+					t.Fatalf("expected 0 but got %#v", got2)
 				}
 			})
 		})
