@@ -91,6 +91,7 @@ func TestAPI(t *testing.T) {
 	t.Run("Window", testWindow(v))
 	t.Run("Tabpage", testTabpage(v))
 	t.Run("Lines", testLines(v))
+	t.Run("Commands", testCommands(v))
 	t.Run("Var", testVar(v))
 	t.Run("Message", testMessage(v))
 	t.Run("Key", testKey(v))
@@ -1037,6 +1038,43 @@ func testLines(v *Nvim) func(*testing.T) {
 					t.Fatalf("row 2 is not equal: want: %q, got: %q", string(want[1]), string(got[1]))
 				}
 			})
+		})
+	}
+}
+
+func testCommands(v *Nvim) func(*testing.T) {
+	return func(t *testing.T) {
+		t.Run("Nvim", func(t *testing.T) {
+			t.Parallel()
+
+			opts := map[string]interface{}{
+				"builtin": false,
+			}
+			cmds, err := v.Commands(opts)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(cmds) > 0 {
+				t.Fatalf("expected 0 length but got %#v", cmds)
+			}
+		})
+
+		t.Run("Batch", func(t *testing.T) {
+			t.Parallel()
+
+			b := v.NewBatch()
+
+			opts := map[string]interface{}{
+				"builtin": false,
+			}
+			var cmds map[string]*Command
+			b.Commands(opts, &cmds)
+			if err := b.Execute(); err != nil {
+				t.Fatal(err)
+			}
+			if len(cmds) > 0 {
+				t.Fatalf("expected 0 length but got %#v", cmds)
+			}
 		})
 	}
 }
