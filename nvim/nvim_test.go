@@ -85,6 +85,7 @@ func TestAPI(t *testing.T) {
 	defer cleanup()
 
 	t.Run("BufAttach", testBufAttach(v))
+	t.Run("APIInfo", testAPIInfo(v))
 	t.Run("SimpleHandler", testSimpleHandler(v))
 	t.Run("Buffer", testBuffer(v))
 	t.Run("Window", testWindow(v))
@@ -220,6 +221,35 @@ func testBufAttach(v *Nvim) func(*testing.T) {
 				t.Fatal(err)
 			}
 		}
+	}
+}
+
+func testAPIInfo(v *Nvim) func(*testing.T) {
+	return func(t *testing.T) {
+		t.Run("Nvim", func(t *testing.T) {
+			apiinfo, err := v.APIInfo()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(apiinfo) == 0 {
+				t.Fatal("expected apiinfo is non-nil")
+			}
+		})
+
+		t.Run("Batch", func(t *testing.T) {
+			t.Parallel()
+
+			b := v.NewBatch()
+
+			var apiinfo []interface{}
+			b.APIInfo(&apiinfo)
+			if err := b.Execute(); err != nil {
+				t.Fatal(err)
+			}
+			if len(apiinfo) == 0 {
+				t.Fatal("expected apiinfo is non-nil")
+			}
+		})
 	}
 }
 
