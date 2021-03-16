@@ -1687,6 +1687,46 @@ func testKey(v *Nvim) func(*testing.T) {
 					t.Fatalf("expected 0 but got %#v", got2)
 				}
 			})
+
+			t.Run("BufferKeyMap", func(t *testing.T) {
+				buffer := Buffer(0)
+				if err := v.SetBufferKeyMap(buffer, "n", "y", "yy", make(map[string]bool)); err != nil {
+					t.Fatal(err)
+				}
+
+				wantMap := []*Mapping{
+					{
+						LHS:     "y",
+						RHS:     "yy",
+						Silent:  0,
+						NoRemap: 0,
+						Expr:    0,
+						Buffer:  1,
+						SID:     0,
+						NoWait:  0,
+						Mode:    "",
+					},
+				}
+				got, err := v.BufferKeyMap(buffer, "n")
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				if !reflect.DeepEqual(wantMap, got) {
+					t.Fatalf("KeyMap(n) = %#v, want: %#v", got[0], wantMap[0])
+				}
+
+				if err := v.DeleteBufferKeyMap(buffer, "n", "y"); err != nil {
+					t.Fatal(err)
+				}
+				got2, err := v.BufferKeyMap(buffer, "n")
+				if err != nil {
+					t.Fatal(err)
+				}
+				if len(got2) > 0 {
+					t.Fatalf("expected 0 but got %#v", got2)
+				}
+			})
 		})
 
 		t.Run("Batch", func(t *testing.T) {
@@ -1879,6 +1919,53 @@ func testKey(v *Nvim) func(*testing.T) {
 				}
 				var got2 []*Mapping
 				b.KeyMap("n", &got2)
+				if err := b.Execute(); err != nil {
+					t.Fatal(err)
+				}
+				if len(got2) > 0 {
+					t.Fatalf("expected 0 but got %#v", got2)
+				}
+			})
+
+			t.Run("BufferKeyMap", func(t *testing.T) {
+				b := v.NewBatch()
+
+				buffer := Buffer(0)
+				b.SetBufferKeyMap(buffer, "n", "y", "yy", make(map[string]bool))
+				if err := b.Execute(); err != nil {
+					t.Fatal(err)
+				}
+
+				wantMap := []*Mapping{
+					{
+						LHS:     "y",
+						RHS:     "yy",
+						Silent:  0,
+						NoRemap: 0,
+						Expr:    0,
+						Buffer:  1,
+						SID:     0,
+						NoWait:  0,
+						Mode:    "",
+					},
+				}
+				var got []*Mapping
+				b.BufferKeyMap(buffer, "n", &got)
+				if err := b.Execute(); err != nil {
+					t.Fatal(err)
+				}
+
+				if !reflect.DeepEqual(wantMap, got) {
+					t.Fatalf("KeyMap(n) = %#v, want: %#v", got[0], wantMap[0])
+				}
+
+				b.DeleteBufferKeyMap(buffer, "n", "y")
+				if err := b.Execute(); err != nil {
+					t.Fatal(err)
+				}
+
+				var got2 []*Mapping
+				b.BufferKeyMap(buffer, "n", &got2)
 				if err := b.Execute(); err != nil {
 					t.Fatal(err)
 				}
