@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"unsafe"
 )
 
 // Type represents the type of value in the MessagePack stream.
@@ -57,6 +58,13 @@ func (t Type) String() string {
 // ErrDataSizeTooLarge is the data size too large error.
 var ErrDataSizeTooLarge = errors.New("msgpack: data size too large")
 
+// ExtensionMap specifies functions for converting MessagePack extensions to Go
+// values.
+//
+// The key is the MessagePack extension type.
+// The value is a function that converts the extension data to a Go value.
+type ExtensionMap map[int]func([]byte) (interface{}, error)
+
 // Decoder reads MessagePack objects from an io.Reader.
 type Decoder struct {
 	extensions ExtensionMap
@@ -76,13 +84,6 @@ func NewDecoder(r io.Reader) *Decoder {
 		r: bufio.NewReaderSize(r, bufioReaderSize),
 	}
 }
-
-// ExtensionMap specifies functions for converting MessagePack extensions to Go
-// values.
-//
-// The key is the MessagePack extension type.
-// The value is a function that converts the extension data to a Go value.
-type ExtensionMap map[int]func([]byte) (interface{}, error)
 
 // SetExtensions specifies functions for converting MessagePack extensions to Go
 // values.
@@ -121,7 +122,7 @@ func (d *Decoder) BytesNoCopy() []byte {
 
 // String returns the current String, Binary or Extension value as a string.
 func (d *Decoder) String() string {
-	return string(d.p)
+	return *(*string)(unsafe.Pointer(&d.p))
 }
 
 // Int returns the current Int value.
@@ -172,7 +173,7 @@ func (d *Decoder) Unpack() error {
 	f := formats[code]
 	d.t = f.t
 
-	d.n, err = f.n(d, code)
+	d.n, err = f.fn(d, code)
 	if err != nil {
 		return d.fatal(err)
 	}
@@ -243,185 +244,185 @@ func (d *Decoder) skipCount() int {
 
 var formats = [256]*struct {
 	t    Type
-	n    func(d *Decoder, code byte) (uint64, error)
+	fn   func(d *Decoder, code byte) (uint64, error)
 	more bool
 }{
 	fixIntCodeMin: {
-		t: Int,
-		n: func(d *Decoder, code byte) (uint64, error) { return uint64(code), nil },
+		t:  Int,
+		fn: func(d *Decoder, code byte) (uint64, error) { return uint64(code), nil },
 	},
 	fixMapCodeMin: {
-		t: MapLen,
-		n: func(d *Decoder, code byte) (uint64, error) { return uint64(code) - uint64(fixMapCodeMin), nil },
+		t:  MapLen,
+		fn: func(d *Decoder, code byte) (uint64, error) { return uint64(code) - uint64(fixMapCodeMin), nil },
 	},
 	fixArrayCodeMin: {
-		t: ArrayLen,
-		n: func(d *Decoder, code byte) (uint64, error) { return uint64(code) - uint64(fixArrayCodeMin), nil },
+		t:  ArrayLen,
+		fn: func(d *Decoder, code byte) (uint64, error) { return uint64(code) - uint64(fixArrayCodeMin), nil },
 	},
 	fixStringCodeMin: {
 		t:    String,
-		n:    func(d *Decoder, code byte) (uint64, error) { return uint64(code) - uint64(fixStringCodeMin), nil },
+		fn:   func(d *Decoder, code byte) (uint64, error) { return uint64(code) - uint64(fixStringCodeMin), nil },
 		more: true,
 	},
-	negFixIntCodeMin: {
-		t: Int,
-		n: func(d *Decoder, code byte) (uint64, error) { return uint64(int64(int8(code))), nil },
-	},
 	nilCode: {
-		t: Nil,
-		n: func(d *Decoder, code byte) (uint64, error) { return 0, nil },
+		t:  Nil,
+		fn: func(d *Decoder, code byte) (uint64, error) { return 0, nil },
+	},
+	unusedCode: {
+		t: Invalid,
+		fn: func(d *Decoder, code byte) (uint64, error) {
+			return 0, fmt.Errorf("msgpack: unknown format code %x", code)
+		},
 	},
 	falseCode: {
-		t: Bool,
-		n: func(d *Decoder, code byte) (uint64, error) { return 0, nil },
+		t:  Bool,
+		fn: func(d *Decoder, code byte) (uint64, error) { return 0, nil },
 	},
 	trueCode: {
-		t: Bool,
-		n: func(d *Decoder, code byte) (uint64, error) { return 1, nil },
+		t:  Bool,
+		fn: func(d *Decoder, code byte) (uint64, error) { return 1, nil },
+	},
+	binary8Code: {
+		t:    Binary,
+		fn:   (*Decoder).read1,
+		more: true,
+	},
+	binary16Code: {
+		t:    Binary,
+		fn:   (*Decoder).read2,
+		more: true,
+	},
+	binary32Code: {
+		t:    Binary,
+		fn:   (*Decoder).read4,
+		more: true,
+	},
+	ext8Code: {
+		t:    Extension,
+		fn:   (*Decoder).read1,
+		more: true,
+	},
+	ext16Code: {
+		t:    Extension,
+		fn:   (*Decoder).read2,
+		more: true,
+	},
+	ext32Code: {
+		t:    Extension,
+		fn:   (*Decoder).read4,
+		more: true,
 	},
 	float32Code: {
 		t: Float,
-		n: func(d *Decoder, code byte) (uint64, error) {
+		fn: func(d *Decoder, code byte) (uint64, error) {
 			n, err := d.read4(code)
 			return math.Float64bits(float64(math.Float32frombits(uint32(n)))), err
 		},
 	},
 	float64Code: {
-		t: Float,
-		n: (*Decoder).read8,
+		t:  Float,
+		fn: (*Decoder).read8,
 	},
 	uint8Code: {
-		t: Uint,
-		n: (*Decoder).read1,
+		t:  Uint,
+		fn: (*Decoder).read1,
 	},
 	uint16Code: {
-		t: Uint,
-		n: (*Decoder).read2,
+		t:  Uint,
+		fn: (*Decoder).read2,
 	},
 	uint32Code: {
-		t: Uint,
-		n: (*Decoder).read4,
+		t:  Uint,
+		fn: (*Decoder).read4,
 	},
 	uint64Code: {
-		t: Uint,
-		n: (*Decoder).read8,
+		t:  Uint,
+		fn: (*Decoder).read8,
 	},
 	int8Code: {
 		t: Int,
-		n: func(d *Decoder, code byte) (uint64, error) {
+		fn: func(d *Decoder, code byte) (uint64, error) {
 			n, err := d.read1(code)
 			return uint64(int64(int8(n))), err
 		},
 	},
 	int16Code: {
 		t: Int,
-		n: func(d *Decoder, code byte) (uint64, error) {
+		fn: func(d *Decoder, code byte) (uint64, error) {
 			n, err := d.read2(code)
 			return uint64(int64(int16(n))), err
 		},
 	},
 	int32Code: {
 		t: Int,
-		n: func(d *Decoder, code byte) (uint64, error) {
+		fn: func(d *Decoder, code byte) (uint64, error) {
 			n, err := d.read4(code)
 			return uint64(int64(int32(n))), err
 		},
 	},
 	int64Code: {
-		t: Int,
-		n: (*Decoder).read8,
-	},
-	string8Code: {
-		t:    String,
-		n:    (*Decoder).read1,
-		more: true,
-	},
-	string16Code: {
-		t:    String,
-		n:    (*Decoder).read2,
-		more: true,
-	},
-	string32Code: {
-		t:    String,
-		n:    (*Decoder).read4,
-		more: true,
-	},
-	binary8Code: {
-		t:    Binary,
-		n:    (*Decoder).read1,
-		more: true,
-	},
-	binary16Code: {
-		t:    Binary,
-		n:    (*Decoder).read2,
-		more: true,
-	},
-	binary32Code: {
-		t:    Binary,
-		n:    (*Decoder).read4,
-		more: true,
-	},
-	array16Code: {
-		t: ArrayLen,
-		n: (*Decoder).read2,
-	},
-	array32Code: {
-		t: ArrayLen,
-		n: (*Decoder).read4,
-	},
-	map16Code: {
-		t: MapLen,
-		n: (*Decoder).read2,
-	},
-	map32Code: {
-		t: MapLen,
-		n: (*Decoder).read4,
+		t:  Int,
+		fn: (*Decoder).read8,
 	},
 	fixExt1Code: {
 		t:    Extension,
-		n:    func(d *Decoder, code byte) (uint64, error) { return 1, nil },
+		fn:   func(d *Decoder, code byte) (uint64, error) { return 1, nil },
 		more: true,
 	},
 	fixExt2Code: {
 		t:    Extension,
-		n:    func(d *Decoder, code byte) (uint64, error) { return 2, nil },
+		fn:   func(d *Decoder, code byte) (uint64, error) { return 2, nil },
 		more: true,
 	},
 	fixExt4Code: {
 		t:    Extension,
-		n:    func(d *Decoder, code byte) (uint64, error) { return 4, nil },
+		fn:   func(d *Decoder, code byte) (uint64, error) { return 4, nil },
 		more: true,
 	},
 	fixExt8Code: {
 		t:    Extension,
-		n:    func(d *Decoder, code byte) (uint64, error) { return 8, nil },
+		fn:   func(d *Decoder, code byte) (uint64, error) { return 8, nil },
 		more: true,
 	},
 	fixExt16Code: {
 		t:    Extension,
-		n:    func(d *Decoder, code byte) (uint64, error) { return 16, nil },
+		fn:   func(d *Decoder, code byte) (uint64, error) { return 16, nil },
 		more: true,
 	},
-	ext8Code: {
-		t:    Extension,
-		n:    (*Decoder).read1,
+	string8Code: {
+		t:    String,
+		fn:   (*Decoder).read1,
 		more: true,
 	},
-	ext16Code: {
-		t:    Extension,
-		n:    (*Decoder).read2,
+	string16Code: {
+		t:    String,
+		fn:   (*Decoder).read2,
 		more: true,
 	},
-	ext32Code: {
-		t:    Extension,
-		n:    (*Decoder).read4,
+	string32Code: {
+		t:    String,
+		fn:   (*Decoder).read4,
 		more: true,
 	},
-	unusedCode: {
-		t: Invalid,
-		n: func(d *Decoder, code byte) (uint64, error) {
-			return 0, fmt.Errorf("msgpack: unknown format code %x", code)
-		},
+	array16Code: {
+		t:  ArrayLen,
+		fn: (*Decoder).read2,
+	},
+	array32Code: {
+		t:  ArrayLen,
+		fn: (*Decoder).read4,
+	},
+	map16Code: {
+		t:  MapLen,
+		fn: (*Decoder).read2,
+	},
+	map32Code: {
+		t:  MapLen,
+		fn: (*Decoder).read4,
+	},
+	negFixIntCodeMin: {
+		t:  Int,
+		fn: func(d *Decoder, code byte) (uint64, error) { return uint64(int64(int8(code))), nil },
 	},
 }
 
@@ -457,13 +458,13 @@ func (d *Decoder) fatal(err error) error {
 	return err
 }
 
-func (d *Decoder) read1(format byte) (uint64, error) {
+func (d *Decoder) read1(byte) (uint64, error) {
 	b, err := d.r.ReadByte()
 
 	return uint64(b), err
 }
 
-func (d *Decoder) read2(format byte) (uint64, error) {
+func (d *Decoder) read2(byte) (uint64, error) {
 	p, err := d.r.Peek(2)
 	if err != nil {
 		return 0, err
@@ -473,7 +474,7 @@ func (d *Decoder) read2(format byte) (uint64, error) {
 	return uint64(p[1]) | uint64(p[0])<<8, nil
 }
 
-func (d *Decoder) read4(format byte) (uint64, error) {
+func (d *Decoder) read4(byte) (uint64, error) {
 	p, err := d.r.Peek(4)
 	if err != nil {
 		return 0, err
@@ -483,7 +484,7 @@ func (d *Decoder) read4(format byte) (uint64, error) {
 	return uint64(p[3]) | uint64(p[2])<<8 | uint64(p[1])<<16 | uint64(p[0])<<24, nil
 }
 
-func (d *Decoder) read8(format byte) (uint64, error) {
+func (d *Decoder) read8(byte) (uint64, error) {
 	p, err := d.r.Peek(8)
 	if err != nil {
 		return 0, err
