@@ -161,7 +161,7 @@ func (b *Batch) HLByName(name string, rgb bool, highlight *HLAttrs) {
 //
 // name arg is highlight group name, like ErrorMsg.
 //
-// val arg is highlight definiton map, like HLByName.
+// val arg is highlight definition map, like HLByName.
 //
 // in addition the following keys are also recognized:
 //
@@ -175,7 +175,7 @@ func (v *Nvim) SetHighlight(nsID int, name string, val *HLAttrs) error {
 //
 // name arg is highlight group name, like ErrorMsg.
 //
-// val arg is highlight definiton map, like HLByName.
+// val arg is highlight definition map, like HLByName.
 //
 // in addition the following keys are also recognized:
 //
