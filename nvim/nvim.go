@@ -563,13 +563,13 @@ func (b *Batch) Request(procedure string, result interface{}, args ...interface{
 
 // Call calls a VimL function with the given arguments.
 //
-// On execution error: fails with VimL error, does not update v:errmsg.
+// Fails with VimL error, does not update "v:errmsg".
 //
-// The fn arg is Function to call.
+// fn is Function to call.
 //
-// The args arg is Function arguments packed in an Array.
+// args is Function arguments packed in an Array.
 //
-// The result is result of the function call.
+// result result of the function call.
 func (v *Nvim) Call(fname string, result interface{}, args ...interface{}) error {
 	if args == nil {
 		args = []interface{}{}
@@ -579,13 +579,13 @@ func (v *Nvim) Call(fname string, result interface{}, args ...interface{}) error
 
 // Call calls a VimL function with the given arguments.
 //
-// On execution error: fails with VimL error, does not update v:errmsg.
+// Fails with VimL error, does not update "v:errmsg".
 //
-// The fn arg is Function to call.
+// fn is Function to call.
 //
-// The args arg is Function arguments packed in an Array.
+// args is function arguments packed in an array.
 //
-// The result is result of the function call.
+// result is result of the function call.
 func (b *Batch) Call(fname string, result interface{}, args ...interface{}) {
 	if args == nil {
 		args = []interface{}{}
@@ -593,15 +593,17 @@ func (b *Batch) Call(fname string, result interface{}, args ...interface{}) {
 	b.call("nvim_call_function", result, fname, args)
 }
 
-// CallDict calls a VimL Dictionary function with the given arguments.
+// CallDict calls a VimL dictionary function with the given arguments.
 //
-// The dict arg is Dictionary, or String evaluating to a VimL "self" dict.
+// Fails with VimL error, does not update "v:errmsg".
 //
-// The fn arg is name of the function defined on the VimL dict.
+// dict is dictionary, or string evaluating to a VimL "self" dict.
 //
-// The args arg is Function arguments packed in an Array.
+// fn is name of the function defined on the VimL dict.
 //
-// The result is result of the function call.
+// args is function arguments packed in an array.
+//
+// result is result of the function call.
 func (v *Nvim) CallDict(dict []interface{}, fname string, result interface{}, args ...interface{}) error {
 	if args == nil {
 		args = []interface{}{}
@@ -609,15 +611,17 @@ func (v *Nvim) CallDict(dict []interface{}, fname string, result interface{}, ar
 	return v.call("nvim_call_dict_function", result, fname, dict, args)
 }
 
-// CallDict calls a VimL Dictionary function with the given arguments.
+// CallDict calls a VimL dictionary function with the given arguments.
 //
-// The dict arg is Dictionary, or String evaluating to a VimL "self" dict.
+// Fails with VimL error, does not update "v:errmsg".
 //
-// The fn arg is name of the function defined on the VimL dict.
+// dict is dictionary, or string evaluating to a VimL "self" dict.
 //
-// The args arg is Function arguments packed in an Array.
+// fn is name of the function defined on the VimL dict.
 //
-// The result is result of the function call.
+// args is Function arguments packed in an Array.
+//
+// result is result of the function call.
 func (b *Batch) CallDict(dict []interface{}, fname string, result interface{}, args ...interface{}) {
 	if args == nil {
 		args = []interface{}{}
@@ -627,11 +631,16 @@ func (b *Batch) CallDict(dict []interface{}, fname string, result interface{}, a
 
 // ExecLua execute Lua code.
 //
-// The code arg is Lua code to execute.
+// Parameters are available as `...` inside the chunk. The chunk can return a value.
 //
-// The args arg is arguments to the code.
+// Only statements are executed. To evaluate an expression, prefix it
+// with `return` is  "return my_function(...)".
 //
-// Parameters (if any) are available as "..." inside the chunk. The chunk can return a value.
+// code is Lua code to execute.
+//
+// args is arguments to the code.
+//
+// The returned result value of Lua code if present or nil.
 func (v *Nvim) ExecLua(code string, result interface{}, args ...interface{}) error {
 	if args == nil {
 		args = []interface{}{}
@@ -641,11 +650,16 @@ func (v *Nvim) ExecLua(code string, result interface{}, args ...interface{}) err
 
 // ExecLua execute Lua code.
 //
-// The code arg is Lua code to execute.
+// Parameters are available as `...` inside the chunk. The chunk can return a value.
 //
-// The args arg is arguments to the code.
+// Only statements are executed. To evaluate an expression, prefix it
+// with `return` is  "return my_function(...)".
 //
-// Parameters (if any) are available as "..." inside the chunk. The chunk can return a value.
+// code is Lua code to execute.
+//
+// args is arguments to the code.
+//
+// The returned result value of Lua code if present or nil.
 func (b *Batch) ExecLua(code string, result interface{}, args ...interface{}) {
 	if args == nil {
 		args = []interface{}{}
@@ -678,11 +692,11 @@ func (b *Batch) ExecuteLua(code string, result interface{}, args ...interface{})
 // Relays the call to vim.notify. By default forwards your message in the
 // echo area but can be overriden to trigger desktop notifications.
 //
-// The msg arg is message to display to the user.
+// msg is message to display to the user.
 //
-// The logLevel arg is the LogLevel.
+// logLevel is the LogLevel.
 //
-// The opts arg is reserved for future use.
+// opts is reserved for future use.
 func (v *Nvim) Notify(msg string, logLevel LogLevel, opts map[string]interface{}) error {
 	if logLevel == LogErrorLevel {
 		return v.WritelnErr(msg)
@@ -701,11 +715,11 @@ func (v *Nvim) Notify(msg string, logLevel LogLevel, opts map[string]interface{}
 // Relays the call to vim.notify. By default forwards your message in the
 // echo area but can be overriden to trigger desktop notifications.
 //
-// The msg arg is message to display to the user.
+// msg is message to display to the user.
 //
-// The logLevel arg is the LogLevel.
+// logLevel is the LogLevel.
 //
-// The opts arg is reserved for future use.
+// opts is reserved for future use.
 func (b *Batch) Notify(msg string, logLevel LogLevel, opts map[string]interface{}) {
 	if logLevel == LogErrorLevel {
 		b.WritelnErr(msg)

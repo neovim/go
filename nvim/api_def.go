@@ -18,38 +18,60 @@ package main
 //
 // Unlike Command, this function supports heredocs, script-scope (s:), etc.
 //
-// On execution error: fails with VimL error, does not update v:errmsg.
+// When fails with VimL error, does not update "v:errmsg".
 func Exec(src string, output bool) (out string) {
 	name(nvim_exec)
 }
 
 // Command executes an ex-command.
+//
+// When fails with VimL error, does not update "v:errmsg".
 func Command(cmd string) {
 	name(nvim_command)
 }
 
-// HLByID gets a highlight definition by name.
-func HLByID(id int, rgb bool) (highlight HLAttrs) {
-	name(nvim_get_hl_by_id)
-	returnPtr()
-}
-
-// HLIDByName gets a highlight group by name.
-func HLIDByName(name string) (highlightID int) {
-	name(nvim_get_hl_id_by_name)
-}
-
 // HLByName gets a highlight definition by id.
+//
+// name is Highlight group name.
+//
+// rgb is whether the export RGB colors.
+//
+// The returned highlight is the highlight definition.
 func HLByName(name string, rgb bool) (highlight HLAttrs) {
 	name(nvim_get_hl_by_name)
 	returnPtr()
 }
 
-// SetHighlight set a highlight group.
+// HLByID gets a highlight definition by name.
 //
-// name arg is highlight group name, like ErrorMsg.
+// hlID is the highlight id as returned by HLIDByName.
 //
-// val arg is highlight definiton map, like HLByName.
+// rgb is the whether the export RGB colors.
+//
+// The returned highlight is the highlight definition.
+func HLByID(hlID int, rgb bool) (highlight HLAttrs) {
+	name(nvim_get_hl_by_id)
+	returnPtr()
+}
+
+// HLIDByName gets a highlight group by name.
+//
+// name is the Highlight group name.
+//
+// The returns hlID is the highlight id.
+//
+// This function similar to HLByID, but allocates a new ID if not present.
+func HLIDByName(name string) (hlID int) {
+	name(nvim_get_hl_id_by_name)
+}
+
+// SetHighlight sets a highlight group.
+//
+// nsID is number of namespace for this highlight.
+//
+// name is highlight group name, like "ErrorMsg".
+//
+// val is highlight definiton map, like HLByName.
 //
 // in addition the following keys are also recognized:
 //
@@ -61,22 +83,17 @@ func SetHighlight(nsID int, name string, val *HLAttrs) {
 
 // SetHighlightNameSpace set active namespace for highlights.
 //
-// NB: this function can be called from async contexts, but the
-// semantics are not yet well-defined.
-// To start with SetDecorationProvider on_win and on_line callbacks
-// are explicitly allowed to change the namespace during a redraw cycle.
-//
-// The nsID arg is the namespace to activate.
+// nsID is the namespace to activate.
 func SetHighlightNameSpace(nsID int) {
 	name(nvim__set_hl_ns)
 }
 
-// FeedKeys sends input-keys to Nvim, subject to various quirks controlled by mode flags.
-// This is a blocking call, unlike Input.
+// FeedKeys input-keys to Nvim, subject to various quirks controlled by "mode"
+// flags. Unlike Input, this is a blocking call.
 //
-// On execution error: does not fail, but updates v:errmsg.
+// This function does not fail, but updates "v:errmsg".
 //
-// If you need to input sequences like <C-o> use ReplaceTermcodes to
+// If need to input sequences like <C-o> use ReplaceTermcodes to
 // replace the termcodes and then pass the resulting string to nvim_feedkeys.
 // You'll also want to enable escape_csi.
 //
@@ -84,13 +101,15 @@ func SetHighlightNameSpace(nsID int) {
 //
 //  m
 // Remap keys. This is default.
+//
 //  n
 // Do not remap keys.
+//
 //  t
 // Handle keys as if typed; otherwise they are handled as if coming from a mapping.
 // This matters for undo, opening folds, etc.
 //
-// The escapeCSI arg is whether the escape K_SPECIAL/CSI bytes in keys arg.
+// escapeCSI is whether the escape K_SPECIAL/CSI bytes in keys.
 func FeedKeys(keys, mode string, escapeCSI bool) {
 	name(nvim_feedkeys)
 }
@@ -99,14 +118,25 @@ func FeedKeys(keys, mode string, escapeCSI bool) {
 //
 // Unlike FeedKeys, this uses a low-level input buffer and the call
 // is non-blocking (input is processed asynchronously by the eventloop).
+//
+// This function does not fail but updates "v:errmsg".
+//
+// keys is to be typed.
+//
+// Note: "keycodes" like "<CR>" are translated, so "<" is special. To input a literal "<", send "<LT>".
+//
+// Note: For mouse events use InputMouse. The pseudokey form "<LeftMouse><col,row>" is deprecated.
+//
+// The returned written is number of bytes actually written (can be fewer than
+// requested if the buffer becomes full).
 func Input(keys string) (written int) {
 	name(nvim_input)
 }
 
-// InputMouse send mouse event from GUI.
+// InputMouse Send mouse event from GUI.
 //
-// This API is non-blocking. It doesn't wait on any resulting action, but
-// queues the event to be processed soon by the event loop.
+// This API is non-blocking. It does not wait on any result, but queues the event to be
+// processed soon by the event loop.
 //
 // The button arg is mouse button. One of
 //  "left"
@@ -114,7 +144,7 @@ func Input(keys string) (written int) {
 //  "middle"
 //  "wheel"
 //
-// The action arg is for ordinary buttons. One of
+// The action is for ordinary buttons. One of
 //  "press"
 //  "drag"
 //  "release"
@@ -124,22 +154,30 @@ func Input(keys string) (written int) {
 //  "left"
 //  "right"
 //
-// The modifier arg is string of modifiers each represented by a single char.
+// modifier is string of modifiers each represented by a single char.
 // The same specifiers are used as for a key press, except
 // that the "-" separator is optional, so "C-A-", "c-a"
 // and "CA" can all be used to specify Ctrl+Alt+click.
 //
-// The grid arg is grid number if the client uses "ui-multigrid", else 0.
+// grid is grid number if the client uses "ui-multigrid", else 0.
 //
-// The row arg is mouse row-position (zero-based, like redraw events).
+// row is mouse row-position (zero-based, like redraw events).
 //
-// The col arg is mouse column-position (zero-based, like redraw events).
+// col is mouse column-position (zero-based, like redraw events).
 func InputMouse(button, action, modifier string, grid, row, col int) {
 	name(nvim_input_mouse)
 }
 
-// ReplaceTermcodes replaces terminal codes and |keycodes| (<CR>, <Esc>, ...) in a string with
+// ReplaceTermcodes replaces terminal codes and "keycodes" (<CR>, <Esc>, ...) in a string with
 // the internal representation.
+//
+// str is string to be converted.
+//
+// fromPart is legacy Vim parameter. Usually true.
+//
+// doLT is also translate <lt>. Ignored if "special" is false.
+//
+// special is replace "keycodes", e.g. "<CR>" becomes a "\n" char.
 //
 // The returned sequences are Nvim's internal representation of keys, for example:
 //
@@ -149,12 +187,6 @@ func InputMouse(button, action, modifier string, grid, row, col int) {
 //  <up>  -> '\x80ku'
 //
 // The returned sequences can be used as input to feedkeys.
-//
-// The fromPart arg is legacy Vim parameter. Usually true.
-//
-// The doLT arg is also translate <lt>. Ignored if "special" is false.
-//
-// The special arg is replace "keycodes", e.g. <CR> becomes a "\n" char.
 func ReplaceTermcodes(str string, fromPart, doLT, special bool) (input string) {
 	name(nvim_replace_termcodes)
 }
@@ -171,34 +203,46 @@ func CommandOutput(cmd string) (out string) {
 //
 // Dictionaries and Lists are recursively expanded.
 //
-// The expr arg is VimL expression string.
+// Fails with VimL error, does not update "v:errmsg".
+//
+// expr is VimL expression string.
 //
 //  :help expression
 func Eval(expr string) (result interface{}) {
 	name(nvim_eval)
 }
 
-// StringWidth calculates the number of display cells occupied by `text`.
+// StringWidth calculates the number of display cells occupied by "text".
 //
-// <Tab> counts as one cell.
+// "<Tab>" counts as one cell.
 func StringWidth(s string) (width int) {
 	name(nvim_strwidth)
 }
 
-// RuntimePaths gets the paths contained in 'runtimepath'.
+// RuntimePaths gets the paths contained in "runtimepath".
 func RuntimePaths() (paths []string) {
 	name(nvim_list_runtime_paths)
 }
 
-// RuntimeFiles finds files in runtime directories and returns list of absolute paths to the found files.
+// RuntimeFiles find files in runtime directories.
 //
-// The name arg is can contain wildcards. For example,
+// name is can contain wildcards.
+//
+// For example,
 //
 //  RuntimeFiles("colors/*.vim", true)
 //
 // will return all color scheme files.
 //
-// The all arg is whether to return all matches or only the first.
+// Always use forward slashes (/) in the search pattern for subdirectories regardless of platform.
+//
+// It is not an error to not find any files, returned an empty array.
+//
+// To find a directory, name must end with a forward slash, like
+// "rplugin/python/".
+// Without the slash it would instead look for an ordinary file called "rplugin/python".
+//
+// all is whether to return all matches or only the first.
 func RuntimeFiles(name string, all bool) (files []string) {
 	name(nvim_get_runtime_file)
 }
@@ -261,10 +305,10 @@ func Option(name string) (option interface{}) {
 // Resulting map has keys:
 //
 //  name
-// Name of the option (like 'filetype').
+// Name of the option (like "filetype").
 //
 //  shortname
-// Shortened name of the option (like 'ft').
+// Shortened name of the option (like "ft").
 //
 //  type
 // type of option ("string", "number" or "boolean").
@@ -285,10 +329,10 @@ func Option(name string) (option interface{}) {
 // Channel where option was set (0 for local).
 //
 //  scope
-// one of "global", "win", or "buf".
+// One of "global", "win", or "buf".
 //
 //  global_local
-// whether win or buf option has a global value.
+// Whether win or buf option has a global value.
 //
 //  commalist
 // List of comma separated values.
@@ -302,13 +346,13 @@ func AllOptionsInfo() (opinfo OptionInfo) {
 
 // OptionInfo gets the option information for one option.
 //
-// Resulting dictionary has keys:
+// Resulting map has keys:
 //
 //  name
-// Name of the option (like 'filetype').
+// Name of the option (like "filetype").
 //
 //  shortname
-// Shortened name of the option (like 'ft').
+// Shortened name of the option (like "ft").
 //
 //  type
 // type of option ("string", "number" or "boolean").
@@ -329,10 +373,10 @@ func AllOptionsInfo() (opinfo OptionInfo) {
 // Channel where option was set (0 for local).
 //
 //  scope
-// one of "global", "win", or "buf".
+// One of "global", "win", or "buf".
 //
 //  global_local
-// whether win or buf option has a global value.
+// Whether win or buf option has a global value.
 //
 //  commalist
 // List of comma separated values.
@@ -351,12 +395,12 @@ func SetOption(name string, value interface{}) {
 
 // Echo echo a message.
 //
-// The chunks is a list of [text, hl_group] arrays, each representing a
+// chunks is a list of [text, hl_group] arrays, each representing a
 // text chunk with specified highlight. hl_group element can be omitted for no highlight.
 //
 // If history is true, add to "message-history".
 //
-// The opts arg is optional parameters. Reserved for future use.
+// opts is optional parameters. Reserved for future use.
 func Echo(chunks []TextChunk, history bool, opts map[string]interface{}) {
 	name(nvim_echo)
 }

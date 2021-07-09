@@ -104,6 +104,9 @@ type HLAttrs struct {
 	// Bold is the bold font style.
 	Bold bool `msgpack:"bold,omitempty"`
 
+	// Standout is the standout font style.
+	Standout int `msgpack:"standout,omitempty"`
+
 	// Underline is the underline font style.
 	Underline bool `msgpack:"underline,omitempty"`
 
@@ -116,19 +119,17 @@ type HLAttrs struct {
 	// Reverse is the reverse to foreground and background.
 	Reverse bool `msgpack:"reverse,omitempty"`
 
-	// Inverse same as Reverse.
-	Inverse bool `msgpack:"inverse,omitempty"`
+	// Strikethrough is the strikethrough font style.
+	Strikethrough bool `msgpack:"strikethrough,omitempty"`
 
-	// Standout is the standout font style.
-	Standout int `msgpack:"standout,omitempty"`
+	ForegroundIndexed bool `msgpack:"fg_indexed,omitempty"`
 
-	// Nocombine override attributes instead of combining them.
-	Nocombine int `msgpack:"nocombine,omitempty"`
+	BackgroundIndexed bool `msgpack:"bg_indexed,omitempty"`
 
-	// Foreground use normal foreground color.
+	// Foreground is foreground color of RGB color.
 	Foreground int `msgpack:"foreground,omitempty" empty:"-1"`
 
-	// Background use normal background color.
+	// Background is background color of RGB color.
 	Background int `msgpack:"background,omitempty" empty:"-1"`
 
 	// Special is used for undercurl and underline.
@@ -140,6 +141,31 @@ type HLAttrs struct {
 	// Only takes effect if 'pumblend' or 'winblend' is set for the menu or window.
 	// See the help at the respective option.
 	Blend int `msgpack:"blend,omitempty"`
+
+	// Nocombine override attributes instead of combining them.
+	Nocombine bool `msgpack:"nocombine,omitempty"`
+
+	// Default don't override existing definition, like "hi default".
+	//
+	// This value is used only SetHighlight.
+	Default bool `msgpack:"default,omitempty"`
+
+	// Cterm is cterm attribute map. Sets attributed for cterm colors.
+	//
+	// Note thet by default cterm attributes are same as attributes of gui color.
+	//
+	// This value is used only SetHighlight.
+	Cterm *HLAttrs `msgpack:"cterm,omitempty"`
+
+	// CtermForeground is the foreground of cterm color.
+	//
+	// This value is used only SetHighlight.
+	CtermForeground int `msgpack:"ctermfg,omitempty" empty:"-1"`
+
+	// CtermBackground is the background of cterm color.
+	//
+	// This value is used only SetHighlight.
+	CtermBackground int `msgpack:"ctermbg,omitempty" empty:"-1"`
 }
 
 // Mapping represents a nvim mapping options.
